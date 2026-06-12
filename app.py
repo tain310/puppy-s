@@ -36,7 +36,7 @@ except Exception as e:
 st.title("🐶 강생이네 경제공동체")
 
 # 데이터 불러오기 (10분 캐시 적용으로 API 과다 호출 방지)
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=600, hash_funcs={"gspread.worksheet.Worksheet": lambda _: None})
 def get_sorted_data(ws):
     data = ws.get_all_records()
     df = pd.DataFrame(data) if data else pd.DataFrame()
