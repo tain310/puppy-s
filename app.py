@@ -4,12 +4,13 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 import json
+import plotly.express as px
 
 st.set_page_config(page_title="강생이네 가계부", layout="wide", page_icon="🐶")
 
 # 🔒 로그인
 st.sidebar.header("🔒 로그인")
-if st.sidebar.text_input("비밀번호 4자리", type="password") != "1234":
+if st.sidebar.text_input("비밀번호 4자리", type="password") != "1117":
     st.warning("비밀번호를 입력하세요.")
     st.stop()
 
@@ -43,7 +44,6 @@ df_living = get_data(sheet_living)
 df_allowance = get_data(sheet_allowance)
 df_invest = get_data(sheet_invest)
 
-# 숫자 데이터 변환 함수 (데이터가 있을 때만 처리)
 def clean_num(df, col):
     if col in df.columns:
         return pd.to_numeric(df[col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
@@ -82,7 +82,9 @@ with tab1:
         sheet_living.update([edited.columns.values.tolist()] + edited.fillna("").values.tolist())
         st.rerun()
     if not df_living.empty and '카테고리' in df_living.columns: 
-        st.bar_chart(df_living.groupby('카테고리')['금액'].sum())
+        df_cat = df_living.groupby('카테고리')['금액'].sum().reset_index()
+        fig = px.pie(df_cat, values='금액', names='카테고리', hole=0.3)
+        st.plotly_chart(fig, use_container_width=True)
 
 with tab2:
     edited = st.data_editor(df_allowance, num_rows="dynamic", use_container_width=True)
@@ -91,7 +93,9 @@ with tab2:
         sheet_allowance.update([edited.columns.values.tolist()] + edited.fillna("").values.tolist())
         st.rerun()
     if not df_allowance.empty and '이름' in df_allowance.columns: 
-        st.bar_chart(df_allowance.groupby('이름')['금액'].sum())
+        df_user = df_allowance.groupby('이름')['금액'].sum().reset_index()
+        fig = px.pie(df_user, values='금액', names='이름', hole=0.3)
+        st.plotly_chart(fig, use_container_width=True)
 
 with tab3:
     st.info("투자 내역은 구글 시트에서 관리됩니다. (읽기 전용)")
