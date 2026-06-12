@@ -47,4 +47,20 @@ if connection_success:
     st.sidebar.header("📊 지출 기록창")
     menu = st.sidebar.selectbox("기록할 항목", ["생활비 지출", "용돈 지출"])
     
-    if menu == "생활
+    if menu == "생활비 지출":
+        st.sidebar.subheader("💸 공동 생활비 입력")
+        date = st.sidebar.date_input("날짜", datetime.today())
+        category = st.sidebar.selectbox("카테고리", ["아파트 대출 이자", "관리비", "식비", "구독료", "핸드폰 비용", "기타 지출"])
+        amount = st.sidebar.number_input("금액 (원)", min_value=0, step=1000)
+        memo = st.sidebar.text_input("메모 (예: 이마트 장보기)")
+        
+        if st.sidebar.button("생활비 기록하기"):
+            sheet_living.append_row([str(date), category, amount, memo])
+            st.sidebar.success("생활비 지출이 꼼꼼하게 기록되었습니다! 멍멍!")
+            st.rerun()
+            
+    elif menu == "용돈 지출":
+        st.sidebar.subheader("☕ 개인 용돈 지출")
+        date = st.sidebar.date_input("날짜", datetime.today())
+        user_name = st.sidebar.selectbox("이름", ["은솔", "강쥐"]) 
+        amount
