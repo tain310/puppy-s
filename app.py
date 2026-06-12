@@ -11,7 +11,7 @@ st.set_page_config(page_title="강생이네 가계부", layout="wide", page_icon
 st.sidebar.header("🔒 로그인")
 user_pw = st.sidebar.text_input("비밀번호 4자리를 입력하세요", type="password")
 
-if user_pw != "1234":  # 원하시는 비밀번호로 변경하세요!
+if user_pw != "1234":
     if user_pw:
         st.sidebar.error("비밀번호가 틀렸습니다 멍! 🐾")
     st.warning("👈 왼쪽 메뉴에서 비밀번호를 입력해야 가계부가 열립니다.")
@@ -55,8 +55,4 @@ if connection_success:
         memo = st.sidebar.text_input("메모 (예: 이마트 장보기)")
         
         if st.sidebar.button("생활비 기록하기"):
-            sheet_living.append_row([str(date), category, amount, memo])
-            st.sidebar.success("생활비 지출이 꼼꼼하게 기록되었습니다! 멍멍!")
-            st.rerun()
-            
-    elif menu == "용돈 지출":
+            sheet_living.append_row([str(date), category,
