@@ -5,7 +5,7 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import json
 
-st.set_page_config(page_title="우리집 경제공동체 가계부", layout="wide", page_icon="💰")
+st.set_page_config(page_title="https://docs.google.com/spreadsheets/d/1w6ykXp8StMYMT0WUmFkj7PZybOnIhYWxKoBDbf_CedM/edit?hl=ko&gid=0#gid=0", layout="wide", page_icon="💰")
 
 # 구글 시트 안전하게 연결하는 함수
 @st.cache_resource
