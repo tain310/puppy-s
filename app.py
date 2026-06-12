@@ -55,8 +55,10 @@ col1.metric("📊 총 생활비", f"{clean_num(df_living, '금액').sum():,} 원
 col2.metric("👥 총 용돈", f"{clean_num(df_allowance, '금액').sum():,} 원")
 col3.metric("🏦 총 자산", f"{clean_num(df_invest, '평가 금액').sum():,} 원")
 
-# 사이드바 입력
+# 사이드바 입력 (날짜 선택 기능 추가)
 menu = st.sidebar.selectbox("기록", ["생활비 입력", "용돈 입력"])
+input_date = st.sidebar.date_input("날짜 선택", datetime.today())
+
 if menu == "생활비 입력":
     cat = st.sidebar.selectbox("분류", ["주택", "의류", "식비", "생필품", "핸드폰 비용", "기타"])
     amt = st.sidebar.number_input("금액", step=1000)
