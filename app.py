@@ -5,9 +5,24 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import json
 
-st.set_page_config(page_title="https://docs.google.com/spreadsheets/d/1w6ykXp8StMYMT0WUmFkj7PZybOnIhYWxKoBDbf_CedM/edit?hl=ko&gid=0#gid=0", layout="wide", page_icon="💰")
+# 브라우저 탭 이름과 아이콘 강생이 테마로 변경!
+st.set_page_config(page_title="강생이네 가계부", layout="wide", page_icon="🐶")
 
-# 구글 시트 안전하게 연결하는 함수
+# ------------------ 🔒 비밀번호 잠금 기능 ------------------
+st.sidebar.header("🔒 로그인")
+user_pw = st.sidebar.text_input("비밀번호 4자리를 입력하세요", type="password")
+
+# ★ 여기에 원하시는 비밀번호를 적어주세요! (현재는 1234)
+if user_pw != "1234":
+    if user_pw: # 입력은 했는데 틀린 경우
+        st.sidebar.error("비밀번호가 틀렸습니다 멍! 🐾")
+    st.warning("👈 왼쪽 메뉴에서 비밀번호를 입력해야 가계부가 열립니다.")
+    st.stop() # 비밀번호를 맞추기 전까지는 아래 코드를 실행하지 않고 숨김
+
+st.sidebar.success("로그인 성공! 환영합니다 뼈다귀 🦴")
+st.sidebar.write("---")
+
+# ------------------ 구글 시트 안전하게 연결 ------------------
 @st.cache_resource
 def get_gspread_client():
     creds_json = st.secrets["gcp_json_credentials"]
@@ -18,19 +33,20 @@ def get_gspread_client():
 
 try:
     gc = get_gspread_client()
-    sh = gc.open("우리집가계부") # 구글 시트 이름
+    # ✨ 가계부 이름 변경 완료!
+    sh = gc.open("강생이네 가계부") 
     sheet_living = sh.worksheet("생활비")
     sheet_allowance = sh.worksheet("용돈")
-    sheet_invest = sh.worksheet("투자") # [종목명, 티커, 보유수량, 현재주가, 평가금액] 구조
+    sheet_invest = sh.worksheet("투자")
     connection_success = True
 except Exception as e:
-    st.error(f"구글 시트 연결에 실패했습니다. Secrets 설정을 확인해주세요! 에러 내용: {e}")
+    st.error(f"구글 시트 연결에 실패했습니다. 권한 설정을 확인해주세요! 에러 내용: {e}")
     connection_success = False
 
 if connection_success:
-    st.title("💰 우리집 경제공동체 가계부")
+    st.title("🐶 강생이네 경제공동체 가계부")
     
-    # ------------------ 사이드바 입력창 (투자 입력 제거, 생활비/용돈만 남김) ------------------
+    # ------------------ 사이드바 입력창 ------------------
     st.sidebar.header("📊 지출 기록창")
     menu = st.sidebar.selectbox("기록할 항목", ["생활비 지출", "용돈 지출"])
     
@@ -43,7 +59,7 @@ if connection_success:
         
         if st.sidebar.button("생활비 기록하기"):
             sheet_living.append_row([str(date), category, amount, memo])
-            st.sidebar.success("생활비 지출이 구글 시트에 기록되었습니다!")
+            st.sidebar.success("생활비 지출이 꼼꼼하게 기록되었습니다! 멍멍!")
             st.rerun()
             
     elif menu == "용돈 지출":
@@ -55,7 +71,7 @@ if connection_success:
         
         if st.sidebar.button("용돈 기록하기"):
             sheet_allowance.append_row([str(date), user_name, amount, memo])
-            st.sidebar.success("용돈 지출이 구글 시트에 기록되었습니다!")
+            st.sidebar.success("용돈 지출이 기록되었습니다!")
             st.rerun()
 
     # ------------------ 데이터 가져오기 및 전처리 ------------------
@@ -63,9 +79,7 @@ if connection_success:
     df_allowance = pd.DataFrame(sheet_allowance.get_all_records())
     df_invest = pd.DataFrame(sheet_invest.get_all_records())
     
-    # 숫자형 데이터 변환 및 예외 처리 (구글 시트 수식 결과를 숫자로 인식하기 위함)
     if not df_invest.empty and '평가금액' in df_invest.columns:
-        # 콤마(,)나 원화기호 등이 들어간 경우를 대비해 숫자로 변환
         df_invest['평가금액'] = pd.to_numeric(df_invest['평가금액'].astype(str).str.replace(',', '').str.extract(r'(\d+)')[0], errors='coerce').fillna(0)
     
     living_total = df_living['금액'].sum() if not df_living.empty and '금액' in df_living.columns else 0
@@ -73,7 +87,6 @@ if connection_success:
     invest_total = df_invest['평가금액'].sum() if not df_invest.empty and '평가금액' in df_invest.columns else 0
     
     # ------------------ 메인 화면 대시보드 ------------------
-    # 상단 요약 카드
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("📊 이번 달 총 생활비 지출", f"{living_total:,} 원")
@@ -84,7 +97,6 @@ if connection_success:
         
     st.write("---")
     
-    # 탭 메뉴로 상세 내역 보기
     tab1, tab2, tab3 = st.tabs(["📋 생활비 세부내역", "👥 용돈 사용 현황", "📈 실시간 자산 상태"])
     
     with tab1:
@@ -110,10 +122,7 @@ if connection_success:
     with tab3:
         st.subheader("📊 여윳돈 투자 포트폴리오")
         if not df_invest.empty:
-            # 구글 시트에서 계산된 [종목명, 티커, 보유수량, 현재주가, 평가금액]을 그대로 예쁘게 출력
             st.dataframe(df_invest, use_container_width=True)
-            
-            # 자산 비중 시각화 (바 차트)
             if '종목명' in df_invest.columns and '평가금액' in df_invest.columns:
                 df_pie = df_invest[['종목명', '평가금액']].set_index('종목명')
                 st.bar_chart(df_pie)
