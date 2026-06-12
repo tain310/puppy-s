@@ -33,7 +33,7 @@ except Exception as e:
     st.error(f"시트 연결 오류: {e}")
     st.stop()
 
-st.title("🐶 강생이네 경제공동체")
+st.title("🐶 강생이네 가계부")
 
 # 데이터 불러오기 및 정렬 로직 (시간순으로 정렬)
 def get_sorted_data(ws):
@@ -64,7 +64,7 @@ menu = st.sidebar.selectbox("기록", ["생활비 입력", "용돈 입력"])
 input_date = st.sidebar.date_input("날짜 선택", datetime.today())
 
 if menu == "생활비 입력":
-    cat = st.sidebar.selectbox("분류", ["대출이자", "관리비", "식비", "구독료", "핸드폰 비용", "기타"])
+    cat = st.sidebar.selectbox("분류", ["정기결제", "생필품", "식비", "먼지", "교통", "룰루랄라", "기타"])
     amt = st.sidebar.number_input("금액", step=1000)
     memo = st.sidebar.text_input("메모")
     if st.sidebar.button("저장"):
