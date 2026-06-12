@@ -110,7 +110,7 @@ if connection_success:
             st.info("아직 입력된 생활비 내역이 없습니다.")
             
     with tab2:
-        st.subheader("은솔 & 친구 용돈 사용 리스트")
+        st.subheader("은솔 & 강쥐 용돈 사용 리스트")
         if not df_allowance.empty:
             st.dataframe(df_allowance, use_container_width=True)
             if '이름' in df_allowance.columns:
