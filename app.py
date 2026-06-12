@@ -58,7 +58,7 @@ col3.metric("🏦 총 자산", f"{clean_num(df_invest, '평가 금액').sum():,}
 # 사이드바 입력
 menu = st.sidebar.selectbox("기록", ["생활비 입력", "용돈 입력"])
 if menu == "생활비 입력":
-    cat = st.sidebar.selectbox("분류", ["대출이자", "관리비", "식비", "구독료", "핸드폰 비용", "기타"])
+    cat = st.sidebar.selectbox("분류", ["주택", "의류", "식비", "생필품", "핸드폰 비용", "기타"])
     amt = st.sidebar.number_input("금액", step=1000)
     memo = st.sidebar.text_input("메모")
     if st.sidebar.button("저장"):
