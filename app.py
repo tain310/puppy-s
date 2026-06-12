@@ -33,7 +33,7 @@ except Exception as e:
     st.error(f"시트 연결 오류: {e}")
     st.stop()
 
-st.title("🐶 강생이네 경제공동체")
+st.title("🐶 강생이네 가계부")
 
 # 데이터 불러오기 (캐시 적용)
 @st.cache_data(ttl=600, hash_funcs={"gspread.worksheet.Worksheet": lambda _: None})
