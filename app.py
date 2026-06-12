@@ -5,13 +5,13 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import json
 import plotly.express as px
-import time  # ⏳ 구글 서버가 숨 고를 시간을 주기 위한 비책이옵니다.
+import time
 
 st.set_page_config(page_title="강생이네 가계부", layout="wide", page_icon="🐶")
 
 # 🔒 로그인
 st.sidebar.header("🔒 로그인")
-if st.sidebar.text_input("비밀번호 4자리", type="password") != "1117":
+if st.sidebar.text_input("비밀번호 4자리", type="password") != "1234":
     st.warning("비밀번호를 입력하세요.")
     st.stop()
 
@@ -34,9 +34,9 @@ except Exception as e:
     st.error(f"시트 연결 오류: {e}")
     st.stop()
 
-st.title("🐶 강생이네 가계부")
+st.title("🐶 강생이네 경제공동체")
 
-# 데이터 불러오기 (캐시를 쓰되 매개변수에 _를 붙여 에러를 봉쇄하였사옵니다)
+# 데이터 불러오기
 @st.cache_data(ttl=600, hash_funcs={"gspread.worksheet.Worksheet": lambda _: None})
 def get_living_data(_ws):
     data = _ws.get_all_records()
@@ -80,23 +80,25 @@ col1.metric("📊 총 생활비", f"{safe_sum(df_living, '금액'):,} 원")
 col2.metric("💸 대출금 상환액", f"{loan_paid:,} 원", f"남은 목표: -{loan_remaining:,} 원")
 col3.metric("🏦 총 자산", f"{safe_sum(df_invest, '평가 금액'):,} 원")
 
-# ✍️ 사이드바 입력창 (Form 기능 탑재)
+# ✍️ 사이드바 입력창
 st.sidebar.subheader("✍️ 지출 및 상환 기록")
 menu = st.sidebar.radio("기록할 항목", ["생활비", "대출금 상환"], horizontal=True)
 
 if menu == "생활비":
-    # ✨ 폼(Form)을 써서 저장 버튼을 누를 때만 작동하게 하였사옵니다.
     with st.sidebar.form("living_form", clear_on_submit=True):
         input_date = st.date_input("날짜 선택", datetime.today())
-        cat = st.selectbox("분류", ["정기결제", "생필품", "식비", "먼지", "교통", "룰루랄라", "경조사", "기타"])
+        cat = st.selectbox("분류", ["정기결제", "생필품", "식비", "먼지", "교통", "룰루랄라", "기타"])
+        # ✨ 결제 수단을 고르는 곳이옵니다! (필요하시면 이름들을 마음껏 바꾸시옵소서)
+        pay_method = st.selectbox("결제 수단", ["은솔카드", "강쥐카드", "공동체크카드", "현금", "기타페이"])
         amt = st.number_input("금액", step=1000)
         memo = st.text_input("메모")
         
         if st.form_submit_button("저장하기"):
-            sheet_living.append_row([str(input_date), cat, amt, memo])
-            get_living_data.clear()  # 구글에 남은 옛 기억을 지웁니다.
-            time.sleep(1.5)  # ⏳ 구글 서버가 장부를 다 쓸 때까지 1.5초 기다려줍니다.
-            st.rerun()       # 그리고 화면을 새로고침합니다!
+            # 구글 시트 1행의 순서와 똑같이 5개의 정보를 담아 보냅니다.
+            sheet_living.append_row([str(input_date), cat, pay_method, amt, memo])
+            get_living_data.clear()  
+            time.sleep(1.5)  
+            st.rerun()       
 
 elif menu == "대출금 상환":
     with st.sidebar.form("loan_form", clear_on_submit=True):
@@ -123,9 +125,19 @@ with tab1:
         st.success("저장되었습니다.")
         st.rerun()
         
-    if not df_living.empty and '카테고리' in df_living.columns: 
-        df_cat = df_living.groupby('카테고리')['금액'].sum().reset_index()
-        st.plotly_chart(px.pie(df_cat, values='금액', names='카테고리', hole=0.3), use_container_width=True)
+    # ✨ 그래프를 나란히 두 개 띄우기 위해 공간을 반으로 나누었사옵니다.
+    if not df_living.empty:
+        col_chart1, col_chart2 = st.columns(2)
+        
+        with col_chart1:
+            if '카테고리' in df_living.columns: 
+                df_cat = df_living.groupby('카테고리')['금액'].sum().reset_index()
+                st.plotly_chart(px.pie(df_cat, values='금액', names='카테고리', hole=0.3, title="🛒 카테고리별 지출"), use_container_width=True)
+                
+        with col_chart2:
+            if '결제수단' in df_living.columns: 
+                df_pay = df_living.groupby('결제수단')['금액'].sum().reset_index()
+                st.plotly_chart(px.pie(df_pay, values='금액', names='결제수단', hole=0.3, title="💳 결제 수단별 지출"), use_container_width=True)
 
 with tab2:
     st.subheader("🎯 대출금 상환 목표: 3,600,000 원")
