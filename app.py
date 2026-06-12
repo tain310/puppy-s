@@ -84,9 +84,15 @@ tab1, tab2, tab3 = st.tabs(["📋 생활비", "👥 용돈", "📈 투자"])
 with tab1:
     edited = st.data_editor(df_living, num_rows="dynamic", use_container_width=True)
     if st.button("생활비 수정 저장"):
-        sheet_living.update([edited.columns.values.tolist()] + edited.fillna("").values.tolist())
-        st.success("저장되었습니다.")
-        st.rerun() # 수정 후 바로 전체 새로고침
+        # 1. 헤더와 데이터를 리스트로 합침
+        data_to_write = [edited.columns.tolist()] + edited.astype(str).values.tolist()
+        
+        # 2. A1 셀부터 확실하게 덮어쓰기 (가장 안정적인 방식)
+        sheet_living.update(values=data_to_write, range_name='A1')
+        
+        st.success("저장되었습니다!")
+        st.rerun() # 수정 후 화면 새로고침
+
     if not df_living.empty and '카테고리' in df_living.columns: 
         st.plotly_chart(px.pie(df_living.groupby('카테고리')['금액'].sum().reset_index(), values='금액', names='카테고리', hole=0.3))
 
