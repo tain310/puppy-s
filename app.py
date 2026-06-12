@@ -10,7 +10,7 @@ st.set_page_config(page_title="강생이네 가계부", layout="wide", page_icon
 
 # 🔒 로그인
 st.sidebar.header("🔒 로그인")
-if st.sidebar.text_input("비밀번호 4자리", type="password") != "1117":
+if st.sidebar.text_input("비밀번호 4자리", type="password") != "1234":
     st.warning("비밀번호를 입력하세요.")
     st.stop()
 
@@ -64,18 +64,18 @@ menu = st.sidebar.selectbox("기록", ["생활비 입력", "용돈 입력"])
 input_date = st.sidebar.date_input("날짜 선택", datetime.today())
 
 if menu == "생활비 입력":
-    cat = st.sidebar.selectbox("분류", ["주택", "의류", "식비", "생필품", "핸드폰 비용", "기타"])
+    cat = st.sidebar.selectbox("분류", ["대출이자", "관리비", "식비", "구독료", "핸드폰 비용", "기타"])
     amt = st.sidebar.number_input("금액", step=1000)
     memo = st.sidebar.text_input("메모")
     if st.sidebar.button("저장"):
-        sheet_living.append_row([str(datetime.today().date()), cat, amt, memo])
+        sheet_living.append_row([str(input_date), cat, amt, memo])
         st.rerun()
 elif menu == "용돈 입력":
     who = st.sidebar.selectbox("이름", ["은솔", "강쥐"])
     amt = st.sidebar.number_input("금액", step=1000)
     memo = st.sidebar.text_input("메모")
     if st.sidebar.button("저장"):
-        sheet_allowance.append_row([str(datetime.today().date()), who, amt, memo])
+        sheet_allowance.append_row([str(input_date), who, amt, memo])
         st.rerun()
 
 # 탭 구성
