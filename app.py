@@ -10,7 +10,7 @@ st.set_page_config(page_title="강생이네 가계부", layout="wide", page_icon
 
 # 🔒 로그인
 st.sidebar.header("🔒 로그인")
-if st.sidebar.text_input("비밀번호 4자리", type="password") != "1234":
+if st.sidebar.text_input("비밀번호 4자리", type="password") != "1117":
     st.warning("비밀번호를 입력하세요.")
     st.stop()
 
