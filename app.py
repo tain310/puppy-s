@@ -10,7 +10,7 @@ st.set_page_config(page_title="강생이네 가계부", layout="wide", page_icon
 
 # 🔒 로그인
 st.sidebar.header("🔒 로그인")
-if st.sidebar.text_input("비밀번호 4자리", type="password") != "1117":
+if st.sidebar.text_input("비밀번호 4자리", type="password") != "1234":
     st.warning("비밀번호를 입력하세요.")
     st.stop()
 
@@ -35,7 +35,7 @@ except Exception as e:
 
 st.title("🐶 강생이네 경제공동체")
 
-# 데이터 불러오기 (10분 캐시 적용으로 API 과다 호출 방지)
+# 데이터 불러오기 (캐시 오류 방지)
 @st.cache_data(ttl=600, hash_funcs={"gspread.worksheet.Worksheet": lambda _: None})
 def get_sorted_data(ws):
     data = ws.get_all_records()
@@ -65,7 +65,6 @@ menu = st.sidebar.selectbox("기록", ["생활비 입력", "용돈 입력"])
 input_date = st.sidebar.date_input("날짜 선택", datetime.today())
 
 if menu == "생활비 입력":
-    # 🐾 은솔 님이 정해주신 분류 목록입니다.
     cat = st.sidebar.selectbox("분류", ["정기결제", "생필품", "식비", "먼지", "교통", "룰루랄라", "기타"])
     amt = st.sidebar.number_input("금액", step=1000)
     memo = st.sidebar.text_input("메모")
@@ -80,11 +79,12 @@ elif menu == "용돈 입력":
         sheet_allowance.append_row([str(input_date), who, amt, memo])
         st.rerun()
 
-# 탭 구성
+# 탭 구성 (핵심 수정 부분: key 추가)
 tab1, tab2, tab3 = st.tabs(["📋 생활비", "👥 용돈", "📈 투자"])
 
 with tab1:
-    edited = st.data_editor(df_living, num_rows="dynamic", use_container_width=True)
+    # 🌟 key="living_editor"를 추가했습니다.
+    edited = st.data_editor(df_living, num_rows="dynamic", use_container_width=True, key="living_editor")
     if st.button("생활비 수정 저장"):
         sheet_living.update(values=[edited.columns.tolist()] + edited.astype(str).values.tolist(), range_name='A1')
         st.success("저장되었습니다.")
@@ -93,7 +93,8 @@ with tab1:
         st.plotly_chart(px.pie(df_living.groupby('카테고리')['금액'].sum().reset_index(), values='금액', names='카테고리', hole=0.3))
 
 with tab2:
-    edited = st.data_editor(df_allowance, num_rows="dynamic", use_container_width=True)
+    # 🌟 key="allowance_editor"를 추가했습니다.
+    edited = st.data_editor(df_allowance, num_rows="dynamic", use_container_width=True, key="allowance_editor")
     if st.button("용돈 수정 저장"):
         sheet_allowance.update(values=[edited.columns.tolist()] + edited.astype(str).values.tolist(), range_name='A1')
         st.success("저장되었습니다.")
