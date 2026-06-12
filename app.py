@@ -10,7 +10,7 @@ st.set_page_config(page_title="강생이네 가계부", layout="wide", page_icon
 
 # 🔒 로그인
 st.sidebar.header("🔒 로그인")
-if st.sidebar.text_input("비밀번호 4자리", type="password") != "1117":
+if st.sidebar.text_input("비밀번호 4자리", type="password") != "1234":
     st.warning("비밀번호를 입력하세요.")
     st.stop()
 
@@ -35,8 +35,9 @@ except Exception as e:
 
 st.title("🐶 강생이네 경제공동체")
 
-# 데이터 불러오기 함수 (강제 새로고침 포함)
-def get_fresh_data(ws):
+# 데이터 불러오기 (10분 캐시 적용으로 API 과다 호출 방지)
+@st.cache_data(ttl=600)
+def get_sorted_data(ws):
     data = ws.get_all_records()
     df = pd.DataFrame(data) if data else pd.DataFrame()
     if not df.empty and '날짜' in df.columns:
@@ -44,9 +45,9 @@ def get_fresh_data(ws):
         df = df.sort_values(by='날짜', ascending=False)
     return df
 
-df_living = get_fresh_data(sheet_living)
-df_allowance = get_fresh_data(sheet_allowance)
-df_invest = get_fresh_data(sheet_invest)
+df_living = get_sorted_data(sheet_living)
+df_allowance = get_sorted_data(sheet_allowance)
+df_invest = get_sorted_data(sheet_invest)
 
 def safe_sum(df, col):
     if col in df.columns:
@@ -64,6 +65,7 @@ menu = st.sidebar.selectbox("기록", ["생활비 입력", "용돈 입력"])
 input_date = st.sidebar.date_input("날짜 선택", datetime.today())
 
 if menu == "생활비 입력":
+    # 🐾 은솔 님이 정해주신 분류 목록입니다.
     cat = st.sidebar.selectbox("분류", ["정기결제", "생필품", "식비", "먼지", "교통", "룰루랄라", "기타"])
     amt = st.sidebar.number_input("금액", step=1000)
     memo = st.sidebar.text_input("메모")
@@ -78,33 +80,27 @@ elif menu == "용돈 입력":
         sheet_allowance.append_row([str(input_date), who, amt, memo])
         st.rerun()
 
-# 탭 구성 및 업데이트 로직 (데이터 덮어쓰기 방식)
+# 탭 구성
 tab1, tab2, tab3 = st.tabs(["📋 생활비", "👥 용돈", "📈 투자"])
 
 with tab1:
     edited = st.data_editor(df_living, num_rows="dynamic", use_container_width=True)
     if st.button("생활비 수정 저장"):
-        # 1. 헤더와 데이터를 리스트로 합침
-        data_to_write = [edited.columns.tolist()] + edited.astype(str).values.tolist()
-        
-        # 2. A1 셀부터 확실하게 덮어쓰기 (가장 안정적인 방식)
-        sheet_living.update(values=data_to_write, range_name='A1')
-        
-        st.success("저장되었습니다!")
-        st.rerun() # 수정 후 화면 새로고침
-
+        sheet_living.update(values=[edited.columns.tolist()] + edited.astype(str).values.tolist(), range_name='A1')
+        st.success("저장되었습니다.")
+        st.rerun()
     if not df_living.empty and '카테고리' in df_living.columns: 
         st.plotly_chart(px.pie(df_living.groupby('카테고리')['금액'].sum().reset_index(), values='금액', names='카테고리', hole=0.3))
 
 with tab2:
     edited = st.data_editor(df_allowance, num_rows="dynamic", use_container_width=True)
     if st.button("용돈 수정 저장"):
-        sheet_allowance.update([edited.columns.values.tolist()] + edited.fillna("").values.tolist())
+        sheet_allowance.update(values=[edited.columns.tolist()] + edited.astype(str).values.tolist(), range_name='A1')
         st.success("저장되었습니다.")
-        st.rerun() # 수정 후 바로 전체 새로고침
+        st.rerun()
     if not df_allowance.empty and '이름' in df_allowance.columns: 
         st.plotly_chart(px.pie(df_allowance.groupby('이름')['금액'].sum().reset_index(), values='금액', names='이름', hole=0.3))
 
 with tab3:
-    st.info("투자 내역은 구글 시트에서 관리됩니다.")
+    st.info("투자 내역은 구글 시트에서 관리됩니다. (읽기 전용)")
     st.dataframe(df_invest, use_container_width=True)
