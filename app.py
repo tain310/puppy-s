@@ -11,7 +11,7 @@ st.set_page_config(page_title="강생이네 가계부", layout="wide", page_icon
 
 # 🔒 로그인
 st.sidebar.header("🔒 로그인")
-if st.sidebar.text_input("비밀번호 4자리", type="password") != "1234":
+if st.sidebar.text_input("비밀번호 4자리", type="password") != "1117":
     st.warning("비밀번호를 입력하세요.")
     st.stop()
 
@@ -70,7 +70,7 @@ def safe_sum(df, col):
     return 0
 
 # 🎯 대출금 목표 계산
-loan_target = 3300000
+loan_target = 3600000
 loan_paid = safe_sum(df_loan, '금액')
 loan_remaining = max(0, loan_target - loan_paid)
 
