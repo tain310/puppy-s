@@ -112,7 +112,7 @@ with tab1:
         st.plotly_chart(px.pie(df_living.groupby('카테고리')['금액'].sum().reset_index(), values='금액', names='카테고리', hole=0.3))
 
 with tab2:
-    st.subheader("🎯 대출금 상환 목표: 3,300,000 원")
+    st.subheader("🎯 대출금 상환 목표: 3,600,000 원")
     
     # 📈 실시간 달성률 프로그레스 바 추가
     progress_per = min(float(loan_paid / loan_target), 1.0) if loan_target > 0 else 0.0
