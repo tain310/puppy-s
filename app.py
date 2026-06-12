@@ -88,7 +88,7 @@ if menu == "생활비":
     # ✨ 폼(Form)을 써서 저장 버튼을 누를 때만 작동하게 하였사옵니다.
     with st.sidebar.form("living_form", clear_on_submit=True):
         input_date = st.date_input("날짜 선택", datetime.today())
-        cat = st.selectbox("분류", ["정기결제", "생필품", "식비", "먼지", "교통", "룰루랄라", "기타"])
+        cat = st.selectbox("분류", ["정기결제", "생필품", "식비", "먼지", "교통", "룰루랄라", "경조사", "기타"])
         amt = st.number_input("금액", step=1000)
         memo = st.text_input("메모")
         
