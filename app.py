@@ -35,54 +35,64 @@ except Exception as e:
 st.title("🐶 강생이네 경제공동체")
 
 # 데이터 로드
-df_living = pd.DataFrame(sheet_living.get_all_records())
-df_allowance = pd.DataFrame(sheet_allowance.get_all_records())
-df_invest = pd.DataFrame(sheet_invest.get_all_records())
+def get_data(ws):
+    data = ws.get_all_records()
+    return pd.DataFrame(data) if data else pd.DataFrame()
 
-# 숫자 데이터 변환 함수
+df_living = get_data(sheet_living)
+df_allowance = get_data(sheet_allowance)
+df_invest = get_data(sheet_invest)
+
+# 숫자 데이터 변환 함수 (데이터가 있을 때만 처리)
 def clean_num(df, col):
-    return pd.to_numeric(df[col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
+    if col in df.columns:
+        return pd.to_numeric(df[col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
+    return pd.Series([0])
 
 # 대시보드
 col1, col2, col3 = st.columns(3)
 col1.metric("📊 총 생활비", f"{clean_num(df_living, '금액').sum():,} 원")
 col2.metric("👥 총 용돈", f"{clean_num(df_allowance, '금액').sum():,} 원")
-col3.metric("🏦 총 자산", f"{clean_num(df_invest, '평가금액').sum():,} 원")
+col3.metric("🏦 총 자산", f"{clean_num(df_invest, '평가 금액').sum():,} 원")
 
 # 사이드바 입력
 menu = st.sidebar.selectbox("기록", ["생활비 입력", "용돈 입력"])
 if menu == "생활비 입력":
-    cat = st.sidebar.selectbox("분류", ["대출이자", "관리비", "식비", "기타"])
+    cat = st.sidebar.selectbox("분류", ["대출이자", "관리비", "식비", "구독료", "핸드폰 비용", "기타"])
     amt = st.sidebar.number_input("금액", step=1000)
+    memo = st.sidebar.text_input("메모")
     if st.sidebar.button("저장"):
-        sheet_living.append_row([str(datetime.today().date()), cat, amt, ""])
+        sheet_living.append_row([str(datetime.today().date()), cat, amt, memo])
         st.rerun()
 elif menu == "용돈 입력":
     who = st.sidebar.selectbox("이름", ["은솔", "강쥐"])
     amt = st.sidebar.number_input("금액", step=1000)
+    memo = st.sidebar.text_input("메모")
     if st.sidebar.button("저장"):
-        sheet_allowance.append_row([str(datetime.today().date()), who, amt, ""])
+        sheet_allowance.append_row([str(datetime.today().date()), who, amt, memo])
         st.rerun()
 
 # 탭 구성
 tab1, tab2, tab3 = st.tabs(["📋 생활비", "👥 용돈", "📈 투자"])
 
 with tab1:
-    edited = st.data_editor(df_living, num_rows="dynamic")
+    edited = st.data_editor(df_living, num_rows="dynamic", use_container_width=True)
     if st.button("생활비 수정 저장"):
         sheet_living.clear()
         sheet_living.update([edited.columns.values.tolist()] + edited.fillna("").values.tolist())
         st.rerun()
-    if not df_living.empty: st.bar_chart(df_living.groupby('카테고리')['금액'].sum())
+    if not df_living.empty and '카테고리' in df_living.columns: 
+        st.bar_chart(df_living.groupby('카테고리')['금액'].sum())
 
 with tab2:
-    edited = st.data_editor(df_allowance, num_rows="dynamic")
+    edited = st.data_editor(df_allowance, num_rows="dynamic", use_container_width=True)
     if st.button("용돈 수정 저장"):
         sheet_allowance.clear()
         sheet_allowance.update([edited.columns.values.tolist()] + edited.fillna("").values.tolist())
         st.rerun()
-    if not df_allowance.empty: st.bar_chart(df_allowance.groupby('이름')['금액'].sum())
+    if not df_allowance.empty and '이름' in df_allowance.columns: 
+        st.bar_chart(df_allowance.groupby('이름')['금액'].sum())
 
 with tab3:
-    st.info("투자 내역은 구글 시트에서 실시간으로 계산됩니다. (읽기 전용)")
+    st.info("투자 내역은 구글 시트에서 관리됩니다. (읽기 전용)")
     st.dataframe(df_invest, use_container_width=True)
