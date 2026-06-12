@@ -35,14 +35,18 @@ except Exception as e:
 
 st.title("🐶 강생이네 경제공동체")
 
-# 데이터 로드
-def get_data(ws):
+# 데이터 불러오기 및 정렬 로직 (시간순으로 정렬)
+def get_sorted_data(ws):
     data = ws.get_all_records()
-    return pd.DataFrame(data) if data else pd.DataFrame()
+    df = pd.DataFrame(data) if data else pd.DataFrame()
+    if not df.empty and '날짜' in df.columns:
+        df['날짜'] = pd.to_datetime(df['날짜'])
+        df = df.sort_values(by='날짜', ascending=False)
+    return df
 
-df_living = get_data(sheet_living)
-df_allowance = get_data(sheet_allowance)
-df_invest = get_data(sheet_invest)
+df_living = get_sorted_data(sheet_living)
+df_allowance = get_sorted_data(sheet_allowance)
+df_invest = get_sorted_data(sheet_invest)
 
 def clean_num(df, col):
     if col in df.columns:
