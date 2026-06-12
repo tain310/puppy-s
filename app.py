@@ -10,7 +10,7 @@ st.set_page_config(page_title="강생이네 가계부", layout="wide", page_icon
 
 # 🔒 로그인
 st.sidebar.header("🔒 로그인")
-if st.sidebar.text_input("비밀번호 4자리", type="password") != "1234":
+if st.sidebar.text_input("비밀번호 4자리", type="password") != "1117":
     st.warning("비밀번호를 입력하세요.")
     st.stop()
 
@@ -64,7 +64,7 @@ menu = st.sidebar.selectbox("기록", ["생활비 입력", "용돈 입력"])
 input_date = st.sidebar.date_input("날짜 선택", datetime.today())
 
 if menu == "생활비 입력":
-    cat = st.sidebar.selectbox("분류", ["대출이자", "관리비", "식비", "구독료", "핸드폰 비용", "기타"])
+    cat = st.sidebar.selectbox("분류", ["정기결제", "생필품", "식비", "먼지", "교통", "룰루랄라", "기타"])
     amt = st.sidebar.number_input("금액", step=1000)
     memo = st.sidebar.text_input("메모")
     if st.sidebar.button("저장"):
