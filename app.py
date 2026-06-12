@@ -7,20 +7,15 @@ import json
 
 st.set_page_config(page_title="강생이네 가계부", layout="wide", page_icon="🐶")
 
-# ------------------ 🔒 비밀번호 잠금 기능 ------------------
+# 🔒 비밀번호 잠금
 st.sidebar.header("🔒 로그인")
-user_pw = st.sidebar.text_input("비밀번호 4자리를 입력하세요", type="password")
+user_pw = st.sidebar.text_input("비밀번호 4자리", type="password")
 
 if user_pw != "1234":
-    if user_pw:
-        st.sidebar.error("비밀번호가 틀렸습니다 멍! 🐾")
-    st.warning("👈 왼쪽 메뉴에서 비밀번호를 입력해야 가계부가 열립니다.")
+    st.warning("로그인하세요.")
     st.stop()
 
-st.sidebar.success("로그인 성공! 환영합니다 뼈다귀 🦴")
-st.sidebar.write("---")
-
-# ------------------ 구글 시트 안전하게 연결 ------------------
+# 구글 시트 연결
 @st.cache_resource
 def get_gspread_client():
     creds_json = st.secrets["gcp_json_credentials"]
@@ -31,36 +26,49 @@ def get_gspread_client():
 
 try:
     gc = get_gspread_client()
-    sh = gc.open("강생이네 가계부") 
+    sh = gc.open("강생이네 가계부")
     sheet_living = sh.worksheet("생활비")
     sheet_allowance = sh.worksheet("용돈")
     sheet_invest = sh.worksheet("투자")
-    connection_success = True
 except Exception as e:
-    st.error(f"구글 시트 연결에 실패했습니다. 에러 내용: {e}")
-    connection_success = False
+    st.error(f"연결 오류: {e}")
+    st.stop()
 
-if connection_success:
-    st.title("🐶 강생이네 경제공동체 가계부")
-    
-    # ------------------ 사이드바 입력창 ------------------
-    st.sidebar.header("📊 지출 기록창")
-    menu = st.sidebar.selectbox("기록할 항목", ["생활비 지출", "용돈 지출"])
-    
-    if menu == "생활비 지출":
-        st.sidebar.subheader("💸 공동 생활비 입력")
-        date = st.sidebar.date_input("날짜", datetime.today())
-        category = st.sidebar.selectbox("카테고리", ["아파트 대출 이자", "관리비", "식비", "구독료", "핸드폰 비용", "기타 지출"])
-        amount = st.sidebar.number_input("금액 (원)", min_value=0, step=1000)
-        memo = st.sidebar.text_input("메모 (예: 이마트 장보기)")
-        
-        if st.sidebar.button("생활비 기록하기"):
-            sheet_living.append_row([str(date), category, amount, memo])
-            st.sidebar.success("생활비 지출이 꼼꼼하게 기록되었습니다! 멍멍!")
-            st.rerun()
-            
-    elif menu == "용돈 지출":
-        st.sidebar.subheader("☕ 개인 용돈 지출")
-        date = st.sidebar.date_input("날짜", datetime.today())
-        user_name = st.sidebar.selectbox("이름", ["은솔", "강쥐"]) 
-        amount
+st.title("🐶 강생이네 경제공동체")
+
+# 사이드바 입력
+menu = st.sidebar.selectbox("메뉴", ["생활비 입력", "용돈 입력"])
+if menu == "생활비 입력":
+    date = st.sidebar.date_input("날짜", datetime.today())
+    cat = st.sidebar.selectbox("분류", ["대출이자", "관리비", "식비", "기타"])
+    amt = st.sidebar.number_input("금액", step=1000)
+    if st.sidebar.button("입력"):
+        sheet_living.append_row([str(date), cat, amt, ""])
+        st.rerun()
+
+elif menu == "용돈 입력":
+    date = st.sidebar.date_input("날짜", datetime.today())
+    who = st.sidebar.selectbox("이름", ["은솔", "강쥐"])
+    amt = st.sidebar.number_input("금액", step=1000)
+    if st.sidebar.button("입력"):
+        sheet_allowance.append_row([str(date), who, amt, ""])
+        st.rerun()
+
+# 메인 화면
+tab1, tab2, tab3 = st.tabs(["생활비", "용돈", "투자"])
+with tab1:
+    df = pd.DataFrame(sheet_living.get_all_records())
+    edited = st.data_editor(df, num_rows="dynamic")
+    if st.button("생활비 저장"):
+        sheet_living.clear()
+        sheet_living.update([edited.columns.values.tolist()] + edited.fillna("").values.tolist())
+        st.rerun()
+with tab2:
+    df = pd.DataFrame(sheet_allowance.get_all_records())
+    edited = st.data_editor(df, num_rows="dynamic")
+    if st.button("용돈 저장"):
+        sheet_allowance.clear()
+        sheet_allowance.update([edited.columns.values.tolist()] + edited.fillna("").values.tolist())
+        st.rerun()
+with tab3:
+    st.dataframe(pd.DataFrame(sheet_invest.get_all_records()))
