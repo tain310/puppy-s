@@ -11,7 +11,7 @@ st.set_page_config(page_title="강생이네 가계부", layout="wide", page_icon
 
 # 🔒 로그인
 st.sidebar.header("🔒 로그인")
-if st.sidebar.text_input("비밀번호 4자리", type="password", key="login_pwd") != "1117":
+if st.sidebar.text_input("비밀번호 4자리", type="password", key="login_pwd") != "1234":
     st.warning("비밀번호를 입력하세요.")
     st.stop()
 
@@ -37,7 +37,7 @@ except Exception as e:
 
 st.title("🐶 강생이네 경제공동체")
 
-# 💡 [구조 혁명] 엉키던 캐시 함수를 3개로 완전히 찢어발겨 서로 침범할 수 없게 구획했사옵니다.
+# 💡 장부별 독립 캐시
 @st.cache_data(ttl=5, hash_funcs={"gspread.worksheet.Worksheet": lambda _: None})
 def get_living_data(_ws):
     data = _ws.get_all_records()
@@ -70,22 +70,16 @@ def get_invest_data(_ws):
     data = _ws.get_all_records()
     return pd.DataFrame(data) if data else pd.DataFrame()
 
-# 각자 고유한 방에서 데이터를 긁어오므로 절대 섞이지 않사옵니다.
 df_living = get_living_data(sheet_living)
 df_loan = get_loan_data(sheet_loan)
 df_income = get_income_data(sheet_income)
 df_invest = get_invest_data(sheet_invest)
 
-# 💡 [독한 수식 업그레이드] 띄어쓰기나 '수입금액' 같은 변형도 찰떡같이 찾아내어 더합니다.
 def safe_sum(df, col):
-    # 열 이름에 보이지 않는 공백이 있다면 싹 제거합니다.
     df.columns = df.columns.astype(str).str.strip()
-    
-    # '금액'이라는 단어가 들어간 기둥(열)을 샅샅이 뒤져 찾아냅니다.
     match_cols = [c for c in df.columns if col in c]
-    
     if match_cols:
-        target_col = match_cols[0] # 찾아낸 첫 번째 기둥을 계산에 씁니다.
+        target_col = match_cols[0]
         cleaned = df[target_col].astype(str).str.replace(r'[^\d.-]', '', regex=True)
         return pd.to_numeric(cleaned, errors='coerce').fillna(0).sum()
     return 0
@@ -96,24 +90,52 @@ def df_to_sheet_values(df):
         df_copy['날짜'] = pd.to_datetime(df_copy['날짜'], errors='coerce').dt.strftime('%Y-%m-%d').fillna('')
     return [df_copy.columns.tolist()] + df_copy.fillna("").astype(str).values.tolist()
 
-# 🎯 계산 로직 (수입과 자산의 정밀 계수)
-loan_target = 4150000
-loan_paid = safe_sum(df_loan, '금액')
-loan_remaining = max(0, loan_target - loan_paid)
+# 📅 [신규 기능] 월별 필터링
+st.sidebar.subheader("📅 월별 장부 조회")
+all_dates = pd.concat([df_living['날짜'], df_loan['날짜'], df_income['날짜']]).dropna()
+if not all_dates.empty:
+    month_list = sorted(all_dates.dt.strftime('%Y-%m').unique().tolist(), reverse=True)
+else:
+    month_list = []
 
-total_income = safe_sum(df_income, '금액')
-total_living = safe_sum(df_living, '금액')
-total_invest = safe_sum(df_invest, '평가 금액')
-total_assets = total_income + total_invest - total_living
+selected_month = st.sidebar.selectbox("조회할 달 선택", ["전체"] + month_list)
 
-# 📊 대시보드 요약창 (이제 수입 합계가 완벽히 따로 계산되어 꽂힙니다)
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("💰 총 수입 현황", f"{total_income:,} 원")
-col2.metric("📊 총 생활비 지출", f"{total_living:,} 원")
-col3.metric("💸 대출금 상환액", f"{loan_paid:,} 원", f"남은 목표: -{loan_remaining:,} 원")
-col4.metric("🏦 총 자산 규모", f"{total_assets:,} 원")
+# 선택된 달에 맞게 데이터 걸러내기
+if selected_month != "전체":
+    df_living_view = df_living[df_living['날짜'].dt.strftime('%Y-%m') == selected_month]
+    df_loan_view = df_loan[df_loan['날짜'].dt.strftime('%Y-%m') == selected_month]
+    df_income_view = df_income[df_income['날짜'].dt.strftime('%Y-%m') == selected_month]
+else:
+    df_living_view = df_living
+    df_loan_view = df_loan
+    df_income_view = df_income
 
-# ✍️ 사이드바 입력창 (Form 저장 즉시 고유 캐시 박멸)
+# 🎯 계산 로직 (화면용 vs 전체 누적용 분리)
+# 화면(조회된 달) 기준 계산
+view_income = safe_sum(df_income_view, '금액')
+view_living = safe_sum(df_living_view, '금액')
+view_net_income = view_income - view_living  # ✨ 새로 명하신 '수입 - 지출' 이옵니다!
+
+# 전체 누적 자산 및 대출 계산 (달과 상관없이 항상 고정)
+total_income_all = safe_sum(df_income, '금액')
+total_living_all = safe_sum(df_living, '금액')
+total_invest_all = safe_sum(df_invest, '평가 금액')
+total_assets = total_income_all + total_invest_all - total_living_all
+
+loan_target = 3300000
+total_loan_paid = safe_sum(df_loan, '금액')
+loan_remaining = max(0, loan_target - total_loan_paid)
+
+# 📊 대시보드 요약창 (수입-지출 칸을 3번째에 추가하여 5칸으로 구성)
+st.subheader(f"📊 {selected_month} 요약 현황")
+col1, col2, col3, col4, col5 = st.columns(5)
+col1.metric("💰 수입 현황", f"{view_income:,} 원")
+col2.metric("💸 생활비 지출", f"{view_living:,} 원")
+col3.metric("✨ 순수익 (수입-지출)", f"{view_net_income:,} 원")
+col4.metric("🏦 총 자산 (누적)", f"{total_assets:,} 원")
+col5.metric("🎯 총 대출 상환", f"{total_loan_paid:,} 원", f"남은 차액: -{loan_remaining:,} 원")
+
+# ✍️ 사이드바 입력창
 st.sidebar.subheader("✍️ 장부 기록 창고")
 menu = st.sidebar.radio("기록할 항목", ["생활비", "대출금 상환", "수입"], horizontal=True, key="sidebar_menu_radio")
 
@@ -125,10 +147,9 @@ if menu == "생활비":
         amt = st.number_input("금액", step=1000, key="amt_input_living")
         memo = st.text_input("메모", key="memo_input_living")
         if st.form_submit_button("저장하기"):
-            # 🌟 괄호가 완벽하게 닫힌 올바른 코드이옵니다!
             sheet_living.append_row([str(input_date), cat, pay_method, amt, memo])
             get_living_data.clear() 
-            time.sleep(1.5)
+            time.sleep(1.0)
             st.rerun()
 
 elif menu == "대출금 상환":
@@ -139,8 +160,8 @@ elif menu == "대출금 상환":
         memo = st.text_input("메모", key="memo_input_loan")
         if st.form_submit_button("저장하기"):
             sheet_loan.append_row([str(input_date), who, amt, memo])
-            get_loan_data.clear() # 💥 대출금 캐시만 저격 타격
-            time.sleep(1.5)
+            get_loan_data.clear() 
+            time.sleep(1.0)
             st.rerun()
 
 elif menu == "수입":
@@ -151,61 +172,77 @@ elif menu == "수입":
         memo = st.text_input("메모", key="memo_input_income")
         if st.form_submit_button("저장하기"):
             sheet_income.append_row([str(input_date), cat, amt, memo])
-            get_income_data.clear() # 💥 수입 캐시만 벼락같이 날림
-            time.sleep(1.5)
+            get_income_data.clear() 
+            time.sleep(1.0)
             st.rerun()
 
 # 🗂️ 메인 탭 구성
 tab1, tab2, tab3, tab4 = st.tabs(["📋 생활비", "💸 대출금 현황", "💰 수입 현황", "📈 투자"])
 
 with tab1:
-    edited = st.data_editor(df_living, num_rows="dynamic", use_container_width=True, key="living_editor")
-    if st.button("생활비 수정 저장"):
-        sheet_living.clear()
-        sheet_living.update(values=df_to_sheet_values(edited), range_name='A1')
-        get_living_data.clear()
-        time.sleep(1.5)
-        st.success("저장되었습니다.")
-        st.rerun()
-    if not df_living.empty:
+    if selected_month == "전체":
+        edited = st.data_editor(df_living, num_rows="dynamic", use_container_width=True, key="living_editor")
+        if st.button("생활비 수정 저장"):
+            sheet_living.clear()
+            sheet_living.update(values=df_to_sheet_values(edited), range_name='A1')
+            get_living_data.clear()
+            time.sleep(1.0)
+            st.success("저장되었습니다.")
+            st.rerun()
+    else:
+        st.info(f"💡 {selected_month} 내역을 확인 중입니다. (내역 수정은 좌측 메뉴에서 '전체' 보기 선택 시 가능합니다)")
+        st.dataframe(df_living_view, use_container_width=True)
+
+    if not df_living_view.empty:
         col_chart1, col_chart2 = st.columns(2)
         with col_chart1:
-            if '카테고리' in df_living.columns: 
-                df_cat = df_living.groupby('카테고리')['금액'].sum().reset_index()
+            if '카테고리' in df_living_view.columns: 
+                df_cat = df_living_view.groupby('카테고리')['금액'].sum().reset_index()
                 st.plotly_chart(px.pie(df_cat, values='금액', names='카테고리', hole=0.3, title="🛒 카테고리별 지출"), use_container_width=True)
         with col_chart2:
-            if '결제수단' in df_living.columns: 
-                df_pay = df_living.groupby('결제수단')['금액'].sum().reset_index()
+            if '결제수단' in df_living_view.columns: 
+                df_pay = df_living_view.groupby('결제수단')['금액'].sum().reset_index()
                 st.plotly_chart(px.pie(df_pay, values='금액', names='결제수단', hole=0.3, title="💳 결제 수단별 지출"), use_container_width=True)
 
 with tab2:
-    st.subheader("🎯 대출금 상환 목표: 4,150,000 원")
-    progress_per = min(float(loan_paid / loan_target), 1.0) if loan_target > 0 else 0.0
+    st.subheader("🎯 대출금 상환 목표: 3,300,000 원")
+    progress_per = min(float(total_loan_paid / loan_target), 1.0) if loan_target > 0 else 0.0
     st.progress(progress_per, text=f"현재 상환율: {progress_per * 100:.1f}% (남은 금액: {loan_remaining:,} 원)")
-    edited = st.data_editor(df_loan, num_rows="dynamic", use_container_width=True, key="loan_editor")
-    if st.button("대출금 내역 수정 저장"):
-        sheet_loan.clear()
-        sheet_loan.update(values=df_to_sheet_values(edited), range_name='A1')
-        get_loan_data.clear()
-        time.sleep(1.5)
-        st.success("저장되었습니다.")
-        st.rerun()
-    if not df_loan.empty and '이름' in df_loan.columns: 
-        df_user = df_loan.groupby('이름')['금액'].sum().reset_index()
+    
+    if selected_month == "전체":
+        edited = st.data_editor(df_loan, num_rows="dynamic", use_container_width=True, key="loan_editor")
+        if st.button("대출금 내역 수정 저장"):
+            sheet_loan.clear()
+            sheet_loan.update(values=df_to_sheet_values(edited), range_name='A1')
+            get_loan_data.clear()
+            time.sleep(1.0)
+            st.success("저장되었습니다.")
+            st.rerun()
+    else:
+        st.info(f"💡 {selected_month} 내역을 확인 중입니다. (내역 수정은 좌측 메뉴에서 '전체' 보기 선택 시 가능합니다)")
+        st.dataframe(df_loan_view, use_container_width=True)
+
+    if not df_loan_view.empty and '이름' in df_loan_view.columns: 
+        df_user = df_loan_view.groupby('이름')['금액'].sum().reset_index()
         st.plotly_chart(px.pie(df_user, values='금액', names='이름', hole=0.3, title="👨‍💻 상환금 기여도 (은솔 & 강쥐)"), use_container_width=True)
 
 with tab3:
-    st.subheader("💰 수입 세부 내역 (더블클릭하여 수정 가능)")
-    edited = st.data_editor(df_income, num_rows="dynamic", use_container_width=True, key="income_editor")
-    if st.button("수입 내역 수정 저장"):
-        sheet_income.clear()
-        sheet_income.update(values=df_to_sheet_values(edited), range_name='A1')
-        get_income_data.clear()
-        time.sleep(1.5)
-        st.success("저장되었습니다.")
-        st.rerun()
-    if not df_income.empty and '분류' in df_income.columns:
-        df_inc_cat = df_income.groupby('분류')['금액'].sum().reset_index()
+    if selected_month == "전체":
+        st.subheader("💰 수입 세부 내역 (더블클릭하여 수정 가능)")
+        edited = st.data_editor(df_income, num_rows="dynamic", use_container_width=True, key="income_editor")
+        if st.button("수입 내역 수정 저장"):
+            sheet_income.clear()
+            sheet_income.update(values=df_to_sheet_values(edited), range_name='A1')
+            get_income_data.clear()
+            time.sleep(1.0)
+            st.success("저장되었습니다.")
+            st.rerun()
+    else:
+        st.info(f"💡 {selected_month} 내역을 확인 중입니다. (내역 수정은 좌측 메뉴에서 '전체' 보기 선택 시 가능합니다)")
+        st.dataframe(df_income_view, use_container_width=True)
+
+    if not df_income_view.empty and '분류' in df_income_view.columns:
+        df_inc_cat = df_income_view.groupby('분류')['금액'].sum().reset_index()
         st.plotly_chart(px.pie(df_inc_cat, values='금액', names='분류', hole=0.3, title="💵 수입 출처별 비중"), use_container_width=True)
 
 with tab4:
