@@ -11,7 +11,7 @@ st.set_page_config(page_title="강생이네 가계부", layout="wide", page_icon
 
 # 🔒 로그인
 st.sidebar.header("🔒 로그인")
-if st.sidebar.text_input("비밀번호 4자리", type="password", key="login_pwd") != "1234":
+if st.sidebar.text_input("비밀번호 4자리", type="password", key="login_pwd") != "1117":
     st.warning("비밀번호를 입력하세요.")
     st.stop()
 
@@ -97,7 +97,7 @@ def df_to_sheet_values(df):
     return [df_copy.columns.tolist()] + df_copy.fillna("").astype(str).values.tolist()
 
 # 🎯 계산 로직 (수입과 자산의 정밀 계수)
-loan_target = 3300000
+loan_target = 4150000
 loan_paid = safe_sum(df_loan, '금액')
 loan_remaining = max(0, loan_target - loan_paid)
 
@@ -179,7 +179,7 @@ with tab1:
                 st.plotly_chart(px.pie(df_pay, values='금액', names='결제수단', hole=0.3, title="💳 결제 수단별 지출"), use_container_width=True)
 
 with tab2:
-    st.subheader("🎯 대출금 상환 목표: 3,300,000 원")
+    st.subheader("🎯 대출금 상환 목표: 4,150,000 원")
     progress_per = min(float(loan_paid / loan_target), 1.0) if loan_target > 0 else 0.0
     st.progress(progress_per, text=f"현재 상환율: {progress_per * 100:.1f}% (남은 금액: {loan_remaining:,} 원)")
     edited = st.data_editor(df_loan, num_rows="dynamic", use_container_width=True, key="loan_editor")
