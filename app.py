@@ -76,10 +76,17 @@ df_loan = get_loan_data(sheet_loan)
 df_income = get_income_data(sheet_income)
 df_invest = get_invest_data(sheet_invest)
 
-# 글자가 섞여도 무조건 숫자만 발라내어 더하는 독한 수식 수호
+# 💡 [독한 수식 업그레이드] 띄어쓰기나 '수입금액' 같은 변형도 찰떡같이 찾아내어 더합니다.
 def safe_sum(df, col):
-    if col in df.columns:
-        cleaned = df[col].astype(str).str.replace(r'[^\d.-]', '', regex=True)
+    # 열 이름에 보이지 않는 공백이 있다면 싹 제거합니다.
+    df.columns = df.columns.astype(str).str.strip()
+    
+    # '금액'이라는 단어가 들어간 기둥(열)을 샅샅이 뒤져 찾아냅니다.
+    match_cols = [c for c in df.columns if col in c]
+    
+    if match_cols:
+        target_col = match_cols[0] # 찾아낸 첫 번째 기둥을 계산에 씁니다.
+        cleaned = df[target_col].astype(str).str.replace(r'[^\d.-]', '', regex=True)
         return pd.to_numeric(cleaned, errors='coerce').fillna(0).sum()
     return 0
 
