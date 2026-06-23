@@ -118,4 +118,8 @@ if menu == "생활비":
         amt = st.number_input("금액", step=1000, key="amt_input_living")
         memo = st.text_input("메모", key="memo_input_living")
         if st.form_submit_button("저장하기"):
-            sheet_living.append_row(
+            # 🌟 괄호가 완벽하게 닫힌 올바른 코드이옵니다!
+            sheet_living.append_row([str(input_date), cat, pay_method, amt, memo])
+            get_living_data.clear() 
+            time.sleep(1.5)
+            st.rerun()
