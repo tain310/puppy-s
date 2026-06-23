@@ -123,3 +123,87 @@ if menu == "생활비":
             get_living_data.clear() 
             time.sleep(1.5)
             st.rerun()
+
+elif menu == "대출금 상환":
+    with st.sidebar.form("loan_form", clear_on_submit=True):
+        input_date = st.date_input("날짜 선택", datetime.today(), key="date_input_loan")
+        who = st.selectbox("상환자", ["은솔", "강쥐"], key="who_input_loan")
+        amt = st.number_input("상환 금액", step=1000, key="amt_input_loan")
+        memo = st.text_input("메모", key="memo_input_loan")
+        if st.form_submit_button("저장하기"):
+            sheet_loan.append_row([str(input_date), who, amt, memo])
+            get_loan_data.clear() # 💥 대출금 캐시만 저격 타격
+            time.sleep(1.5)
+            st.rerun()
+
+elif menu == "수입":
+    with st.sidebar.form("income_form", clear_on_submit=True):
+        input_date = st.date_input("날짜 선택", datetime.today(), key="date_input_income")
+        cat = st.selectbox("수입 분류", ["월급", "보너스", "부수입", "당근마켓", "기타"], key="cat_input_income")
+        amt = st.number_input("수입 금액", step=1000, key="amt_input_income")
+        memo = st.text_input("메모", key="memo_input_income")
+        if st.form_submit_button("저장하기"):
+            sheet_income.append_row([str(input_date), cat, amt, memo])
+            get_income_data.clear() # 💥 수입 캐시만 벼락같이 날림
+            time.sleep(1.5)
+            st.rerun()
+
+# 🗂️ 메인 탭 구성
+tab1, tab2, tab3, tab4 = st.tabs(["📋 생활비", "💸 대출금 현황", "💰 수입 현황", "📈 투자"])
+
+with tab1:
+    edited = st.data_editor(df_living, num_rows="dynamic", use_container_width=True, key="living_editor")
+    if st.button("생활비 수정 저장"):
+        sheet_living.clear()
+        sheet_living.update(values=df_to_sheet_values(edited), range_name='A1')
+        get_living_data.clear()
+        time.sleep(1.5)
+        st.success("저장되었습니다.")
+        st.rerun()
+    if not df_living.empty:
+        col_chart1, col_chart2 = st.columns(2)
+        with col_chart1:
+            if '카테고리' in df_living.columns: 
+                df_cat = df_living.groupby('카테고리')['금액'].sum().reset_index()
+                st.plotly_chart(px.pie(df_cat, values='금액', names='카테고리', hole=0.3, title="🛒 카테고리별 지출"), use_container_width=True)
+        with col_chart2:
+            if '결제수단' in df_living.columns: 
+                df_pay = df_living.groupby('결제수단')['금액'].sum().reset_index()
+                st.plotly_chart(px.pie(df_pay, values='금액', names='결제수단', hole=0.3, title="💳 결제 수단별 지출"), use_container_width=True)
+
+with tab2:
+    st.subheader("🎯 대출금 상환 목표: 3,300,000 원")
+    progress_per = min(float(loan_paid / loan_target), 1.0) if loan_target > 0 else 0.0
+    st.progress(progress_per, text=f"현재 상환율: {progress_per * 100:.1f}% (남은 금액: {loan_remaining:,} 원)")
+    edited = st.data_editor(df_loan, num_rows="dynamic", use_container_width=True, key="loan_editor")
+    if st.button("대출금 내역 수정 저장"):
+        sheet_loan.clear()
+        sheet_loan.update(values=df_to_sheet_values(edited), range_name='A1')
+        get_loan_data.clear()
+        time.sleep(1.5)
+        st.success("저장되었습니다.")
+        st.rerun()
+    if not df_loan.empty and '이름' in df_loan.columns: 
+        df_user = df_loan.groupby('이름')['금액'].sum().reset_index()
+        st.plotly_chart(px.pie(df_user, values='금액', names='이름', hole=0.3, title="👨‍💻 상환금 기여도 (은솔 & 강쥐)"), use_container_width=True)
+
+with tab3:
+    st.subheader("💰 수입 세부 내역 (더블클릭하여 수정 가능)")
+    edited = st.data_editor(df_income, num_rows="dynamic", use_container_width=True, key="income_editor")
+    if st.button("수입 내역 수정 저장"):
+        sheet_income.clear()
+        sheet_income.update(values=df_to_sheet_values(edited), range_name='A1')
+        get_income_data.clear()
+        time.sleep(1.5)
+        st.success("저장되었습니다.")
+        st.rerun()
+    if not df_income.empty and '분류' in df_income.columns:
+        df_inc_cat = df_income.groupby('분류')['금액'].sum().reset_index()
+        st.plotly_chart(px.pie(df_inc_cat, values='금액', names='분류', hole=0.3, title="💵 수입 출처별 비중"), use_container_width=True)
+
+with tab4:
+    st.info("투자 내역은 구글 시트에서 15분마다 자동으로 최신화됩니다.")
+    if st.button("🔄 투자 내역 강제 새로고침"):
+        get_invest_data.clear()
+        st.rerun()
+    st.dataframe(df_invest, use_container_width=True)
