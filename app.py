@@ -11,7 +11,7 @@ st.set_page_config(page_title="강생이네 가계부", layout="wide", page_icon
 
 # 🔒 로그인
 st.sidebar.header("🔒 로그인")
-if st.sidebar.text_input("비밀번호 4자리", type="password") != "1234":
+if st.sidebar.text_input("비밀번호 4자리", type="password", key="login_pwd") != "1234":
     st.warning("비밀번호를 입력하세요.")
     st.stop()
 
@@ -37,9 +37,9 @@ except Exception as e:
 
 st.title("🐶 강생이네 경제공동체")
 
-# 💡 [안전 제일] 꼼수를 다 버리고, 무조건 구글 시트 원본만 봅니다.
+# 💡 [치명적 오류 해결] sheet_name 인자를 추가하여 컴퓨터가 각 장부를 확실하게 구분하여 기억하도록 고쳤사옵니다.
 @st.cache_data(ttl=5, hash_funcs={"gspread.worksheet.Worksheet": lambda _: None})
-def get_data(_ws):
+def get_tab_data(_ws, sheet_name):
     try:
         data = _ws.get_all_records()
         df = pd.DataFrame(data) if data else pd.DataFrame()
@@ -58,12 +58,12 @@ def get_invest_data(_ws):
     except Exception:
         return pd.DataFrame()
 
-df_living = get_data(sheet_living)
-df_loan = get_data(sheet_loan)
-df_income = get_data(sheet_income)
+# 이제 각각의 데이터가 꼬이지 않고 제 주인을 찾아가옵니다.
+df_living = get_tab_data(sheet_living, "생활비")
+df_loan = get_tab_data(sheet_loan, "대출금")
+df_income = get_tab_data(sheet_income, "수입")
 df_invest = get_invest_data(sheet_invest)
 
-# 💡 [독한 수식] 칸에 띄어쓰기나 글자가 섞여 있어도 기어코 숫자만 빼내어 더합니다.
 def safe_sum(df, col):
     if col in df.columns:
         cleaned = df[col].astype(str).str.replace(r'[^\d.-]', '', regex=True)
@@ -76,7 +76,7 @@ def df_to_sheet_values(df):
         df_copy['날짜'] = pd.to_datetime(df_copy['날짜'], errors='coerce').dt.strftime('%Y-%m-%d').fillna('')
     return [df_copy.columns.tolist()] + df_copy.fillna("").astype(str).values.tolist()
 
-# 🎯 계산 로직 (수입 합계 오류 해결)
+# 🎯 계산 로직
 loan_target = 3300000
 loan_paid = safe_sum(df_loan, '금액')
 loan_remaining = max(0, loan_target - loan_paid)
@@ -99,38 +99,38 @@ menu = st.sidebar.radio("기록할 항목", ["생활비", "대출금 상환", "�
 
 if menu == "생활비":
     with st.sidebar.form("living_form", clear_on_submit=True):
-        input_date = st.date_input("날짜 선택", datetime.today())
-        cat = st.selectbox("분류", ["정기결제", "생필품", "식비", "먼지", "교통", "룰루랄라", "기타"])
-        pay_method = st.selectbox("결제 수단", ["은솔카드", "강쥐카드", "공동체크카드", "현금", "기타페이"])
-        amt = st.number_input("금액", step=1000)
-        memo = st.text_input("메모")
+        input_date = st.date_input("날짜 선택", datetime.today(), key="date_input_living")
+        cat = st.selectbox("분류", ["정기결제", "생필품", "식비", "먼지", "교통", "룰루랄라", "기타"], key="cat_input_living")
+        pay_method = st.selectbox("결제 수단", ["은솔카드", "강쥐카드", "공동체크카드", "현금", "기타페이"], key="pay_input_living")
+        amt = st.number_input("금액", step=1000, key="amt_input_living")
+        memo = st.text_input("메모", key="memo_input_living")
         if st.form_submit_button("저장하기"):
             sheet_living.append_row([str(input_date), cat, pay_method, amt, memo])
-            get_data.clear() # 이전 기억을 싹 날림
-            time.sleep(1.0)  # 구글이 장부 쓸 시간 1초 대기
+            get_tab_data.clear()
+            time.sleep(1.0)
             st.rerun()
 
 elif menu == "대출금 상환":
     with st.sidebar.form("loan_form", clear_on_submit=True):
-        input_date = st.date_input("날짜 선택", datetime.today())
-        who = st.selectbox("상환자", ["은솔", "강쥐"])
-        amt = st.number_input("상환 금액", step=1000)
-        memo = st.text_input("메모")
+        input_date = st.date_input("날짜 선택", datetime.today(), key="date_input_loan")
+        who = st.selectbox("상환자", ["은솔", "강쥐"], key="who_input_loan")
+        amt = st.number_input("상환 금액", step=1000, key="amt_input_loan")
+        memo = st.text_input("메모", key="memo_input_loan")
         if st.form_submit_button("저장하기"):
             sheet_loan.append_row([str(input_date), who, amt, memo])
-            get_data.clear()
+            get_tab_data.clear()
             time.sleep(1.0)
             st.rerun()
 
 elif menu == "수입":
     with st.sidebar.form("income_form", clear_on_submit=True):
-        input_date = st.date_input("날짜 선택", datetime.today())
-        cat = st.selectbox("수입 분류", ["월급", "보너스", "부수입", "당근마켓", "기타"])
-        amt = st.number_input("수입 금액", step=1000)
-        memo = st.text_input("메모")
+        input_date = st.date_input("날짜 선택", datetime.today(), key="date_input_income")
+        cat = st.selectbox("수입 분류", ["월급", "보너스", "부수입", "당근마켓", "기타"], key="cat_input_income")
+        amt = st.number_input("수입 금액", step=1000, key="amt_input_income")
+        memo = st.text_input("메모", key="memo_input_income")
         if st.form_submit_button("저장하기"):
             sheet_income.append_row([str(input_date), cat, amt, memo])
-            get_data.clear()
+            get_tab_data.clear()
             time.sleep(1.0)
             st.rerun()
 
@@ -143,7 +143,7 @@ with tab1:
         if not edited.empty:
             sheet_living.clear()
             sheet_living.update(values=df_to_sheet_values(edited), range_name='A1')
-            get_data.clear()
+            get_tab_data.clear()
             time.sleep(1.0)
             st.success("저장되었습니다.")
             st.rerun()
@@ -167,7 +167,7 @@ with tab2:
         if not edited.empty:
             sheet_loan.clear()
             sheet_loan.update(values=df_to_sheet_values(edited), range_name='A1')
-            get_data.clear()
+            get_tab_data.clear()
             time.sleep(1.0)
             st.success("저장되었습니다.")
             st.rerun()
@@ -182,7 +182,7 @@ with tab3:
         if not edited.empty:
             sheet_income.clear()
             sheet_income.update(values=df_to_sheet_values(edited), range_name='A1')
-            get_data.clear()
+            get_tab_data.clear()
             time.sleep(1.0)
             st.success("저장되었습니다.")
             st.rerun()
